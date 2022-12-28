@@ -1,0 +1,4 @@
+solve
+compile_commands.json
+.cache/
+*.o
