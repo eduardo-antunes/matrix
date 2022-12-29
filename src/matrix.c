@@ -7,6 +7,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #include "matrix.h"
 
@@ -67,6 +68,10 @@ void matrix_print(const Matrix *mat) {
 
 // Basic operations:
 
+bool matrix_square(Matrix *mat) {
+    return mat->rows == mat->cols;
+}
+
 void matrix_scale(Matrix *mat, double k) {
     for(int i = 0; i < mat->rows; ++i)
         for(int j = 0; j < mat->cols; ++j)
@@ -105,6 +110,12 @@ void matrix_scale_row(Matrix *mat, int r, double k) {
         mat->p[r][j] *= k;
 }
 
+void matrix_divide_row(Matrix *mat, int r, double k) {
+    assert(k != 0);
+    for(int j = 0; j < mat->cols; ++j)
+        mat->p[r][j] /= k;
+}
+
 void matrix_add_rows(Matrix *mat, int rr, int rf, double k) {
     for(int j = 0; j < mat->cols; ++j)
         mat->p[rr][j] += k * mat->p[rf][j];
@@ -137,7 +148,6 @@ static void sort_by_pivots(Matrix *mat, int *pivots) {
 }
 
 void matrix_reduce(Matrix *mat) {
-    double scalar;
     int j, pivots[mat->rows];
     find_pivots(mat, pivots);
     for(int i = 0; i < mat->rows; ++i) {
@@ -146,13 +156,13 @@ void matrix_reduce(Matrix *mat) {
         // Step #2
         j = pivots[i];
         if(j >= mat->cols) break;
-        scalar = 1 / mat->p[i][j];
-        matrix_scale_row(mat, i, scalar);
+        double t = mat->p[i][j];
+        matrix_divide_row(mat, i, t);
         // Step #3
         for(int k = 0; k < mat->rows; ++k) {
             if(k == i) continue;
-            scalar = -mat->p[k][j];
-            matrix_add_rows(mat, k, i, scalar);
+            t = -mat->p[k][j];
+            matrix_add_rows(mat, k, i, t);
         }
         // Step #4
         find_pivots(mat, pivots);
@@ -166,52 +176,41 @@ Matrix matrix_augment(Matrix *a, Matrix *b) {
     matrix_init(&ab, a->rows, a->cols + b->cols);
     for(int i = 0; i < ab.rows; ++i) {
         for(int j = 0; j < ab.cols; ++j) {
-            if(j < a->cols)
-                ab.p[i][j] = a->p[i][j];
-            else
-                ab.p[i][j] = b->p[i][j - a->cols];
+            ab.p[i][j] = (j < a->cols) ?
+                a->p[i][j] : b->p[i][j - a->cols];
         }
     }
     return ab;
 }
 
-static void sort_by_pivots2(Matrix *a, Matrix *b, int *pivots) {
-    int aux;
-    for(int i = 1; i < a->rows; ++i) {
-        aux = pivots[i];
-        int j = i - 1;
-        while(j >= 0 && aux < pivots[j]) {
-            matrix_swap_rows(a, j, j + 1);
-            matrix_swap_rows(b, j, j + 1);
-            pivots[j + 1] = pivots[j];
-            --j;
-        }
-        pivots[j + 1] = aux;
-    }
+Matrix matrix_solve(Matrix *a, Matrix *b) {
+    Matrix sys = matrix_augment(a, b);
+    matrix_reduce(&sys);
+
+    Matrix x;
+    matrix_init(&x, a->cols, 1);
+    int last_col = sys.cols - 1;
+    for(int i = 0; i < sys.rows; ++i)
+        x.p[i][0] = sys.p[i][last_col];
+
+    matrix_free(&sys);
+    return x;
 }
 
-Matrix matrix_solve(Matrix *a, Matrix *b) {
-    int pivots[a->rows];
-    find_pivots(a, pivots);
-    for(int i = 0; i < a->rows; ++i) {
-        // Step #1
-        sort_by_pivots2(a, b, pivots);
-        // Step #2
-        int j = pivots[i];
-        if(j >= a->cols) break;
-        double t = 1 / a->p[i][j];
-        matrix_scale_row(a, i, t);
-        matrix_scale_row(b, i, t);
-        // Step #3
-        for(int k = 0; k < a->rows; ++k) {
-            if(k == i) continue;
-            t = -a->p[k][j];
-            matrix_add_rows(a, k, i, t);
-            matrix_add_rows(b, k, i, t);
-        }
-        // Step #4
-        find_pivots(a, pivots);
-    }
+Matrix matrix_inverse(Matrix *mat) {
+    assert(matrix_square(mat));
+    Matrix id, inv;
+    matrix_init(&inv, mat->rows, mat->cols);
+    matrix_init_id(&id, mat->rows);
 
-    return matrix_copy(b);
+    Matrix aug = matrix_augment(mat, &id);
+    // aug = mat|I, so by reducing it, we obtain I|inv
+    matrix_reduce(&aug);
+    for(int i = 0; i < mat->rows; ++i)
+        for(int j = 0; j < mat->cols; ++j)
+            inv.p[i][j] = aug.p[i][j + mat->cols];
+
+    matrix_free(&aug);
+    matrix_free(&id);
+    return inv;
 }

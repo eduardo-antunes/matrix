@@ -7,7 +7,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "matrix.h"
 
 #include "matrix.h"
 
@@ -20,7 +19,7 @@ int main(void) {
 
     double q[equations][1];
     double p[equations][unknowns];
-    printf("Augmented matrix:\n");
+    printf("Matrix A|B:\n");
     for(int i = 0; i < equations; ++i) {
         for(int j = 0; j < unknowns; ++j)
             scanf("%lf", &p[i][j]);
@@ -32,12 +31,12 @@ int main(void) {
     matrix_init_with(&b, equations, 1, q);
 
     Matrix x = matrix_solve(&a, &b);
+    printf("Solution to Ax = B:\n");
     for(int i = 0; i < x.rows; ++i)
-        printf("x%d = %g\n", i, x.p[i][0]);
+        printf("%g\n", x.p[i][0]);
 
     matrix_free(&a);
     matrix_free(&b);
     matrix_free(&x);
     return 0;
-
 }

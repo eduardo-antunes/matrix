@@ -1,4 +1,5 @@
 solve
+inverse
 compile_commands.json
 .cache/
 *.o
