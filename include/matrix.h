@@ -55,7 +55,7 @@ void matrix_reduce(Matrix *mat);
 
 Matrix matrix_augment(Matrix *a, Matrix *b);
 
-Matrix matrix_solve(Matrix *a, Matrix *b);
+Matrix matrix_solve(Matrix *a, Matrix *b, bool *has_solution);
 
 Matrix matrix_solve_aug(Matrix *sys);
 

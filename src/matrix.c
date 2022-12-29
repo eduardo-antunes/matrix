@@ -183,15 +183,26 @@ Matrix matrix_augment(Matrix *a, Matrix *b) {
     return ab;
 }
 
-Matrix matrix_solve(Matrix *a, Matrix *b) {
+Matrix matrix_solve(Matrix *a, Matrix *b, bool *has_solution) {
+    *has_solution = true; // assume there is a solution
     Matrix sys = matrix_augment(a, b);
     matrix_reduce(&sys);
 
     Matrix x;
     matrix_init(&x, a->cols, 1);
-    int last_col = sys.cols - 1;
-    for(int i = 0; i < sys.rows; ++i)
+    int h, last_col = sys.cols - 1;
+    for(int i = 0; i < sys.rows; ++i) {
+        h = 0;
+        for(int j = 0; j < last_col; ++j)
+            h += sys.p[i][j];
+        if(h == 0) {
+            // this indicates that rank(A) < rank(A|B)
+            // thus, there is no solution to the system
+            *has_solution = false;
+            break;
+        }
         x.p[i][0] = sys.p[i][last_col];
+    }
 
     matrix_free(&sys);
     return x;

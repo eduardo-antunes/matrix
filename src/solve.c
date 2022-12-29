@@ -7,6 +7,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #include "matrix.h"
 
@@ -30,10 +31,14 @@ int main(void) {
     matrix_init_with(&a, equations, unknowns, p);
     matrix_init_with(&b, equations, 1, q);
 
-    Matrix x = matrix_solve(&a, &b);
-    printf("Solution to Ax = B:\n");
-    for(int i = 0; i < x.rows; ++i)
-        printf("%g\n", x.p[i][0]);
+    bool has_solution;
+    Matrix x = matrix_solve(&a, &b, &has_solution);
+    if(!has_solution)
+        printf("There is no solution to Ax = B\n");
+    else {
+        printf("Solution to Ax = B:\n");
+        matrix_print(&x);
+    }
 
     matrix_free(&a);
     matrix_free(&b);
