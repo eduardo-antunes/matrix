@@ -23,6 +23,8 @@ void matrix_init_id(Matrix *mat, int order);
 
 void matrix_init_with(Matrix *mat, int rows, int cols, double p[rows][cols]);
 
+void matrix_init_with_diag(Matrix *mat, int order, double diag[order]);
+
 void matrix_init_copy(Matrix *mat, const Matrix *src);
 
 void matrix_print(const Matrix *mat);
@@ -33,12 +35,24 @@ void matrix_free(Matrix *mat);
 
 void matrix_scale(Matrix *mat, double k);
 
-void matrix_add(const Matrix *a, const Matrix *b, Matrix *res);
+Matrix matrix_add(const Matrix *a, const Matrix *b);
 
-void matrix_prod(const Matrix *a, const Matrix *b, Matrix *res);
+Matrix matrix_prod(const Matrix *a, const Matrix *b);
+
+// Tests and conditions:
+
+bool matrix_is_square(const Matrix *mat);
+
+bool matrixis_is_diagonally_dominant(const Matrix *mat);
 
 // Solving linear systems of equations:
 
-bool matrix_solve(Matrix *a, Matrix *b, Matrix *res);
+Matrix matrix_solve(Matrix *a, Matrix *b, bool *solution);
+
+/* This implements the Gauss-Seidel algorithm. As such, it requires
+ * matrix A to be a square matrix. To guarantee convergence, it also
+ * must be strictly diagonally dominant.
+ */
+Matrix matrix_solve_numerical(Matrix *a, Matrix *b, int iters);
 
 #endif // MATRIX_H

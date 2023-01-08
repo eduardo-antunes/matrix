@@ -19,12 +19,12 @@ int main(void) {
         scanf("%lf", &q[i][0]);
     }
 
-    Matrix a, b, x;
+    Matrix a, b;
     matrix_init_with(&a, 2, 2, p);
     matrix_init_with(&b, 2, 1, q);
-    matrix_init(&x, 2, 1);
 
-    bool solution = matrix_solve(&a, &b, &x);
+    bool solution;
+    Matrix x = matrix_solve(&a, &b, &solution);
     if(solution) {
         printf("Solution to Ax = B:\n");
         matrix_print(&x);

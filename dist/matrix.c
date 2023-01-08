@@ -13,7 +13,7 @@
 
 // Meta operations:
 
-static void matrix_alloc(Matrix *mat, int rows, int cols) {
+static void matrix_create(Matrix *mat, int rows, int cols) {
     mat->p = (double**) malloc(rows * sizeof(double*));
     for(int i = 0; i < rows; ++i)
         mat->p[i] = (double*) malloc(cols * sizeof(double));
@@ -22,28 +22,35 @@ static void matrix_alloc(Matrix *mat, int rows, int cols) {
 }
 
 void matrix_init(Matrix *mat, int rows, int cols) {
-    matrix_alloc(mat, rows, cols);
+    matrix_create(mat, rows, cols);
     for(int i = 0; i < rows; ++i)
         for(int j = 0; j < cols; ++j)
             mat->p[i][j] = 0;
 }
 
 void matrix_init_id(Matrix *mat, int order) {
-    matrix_alloc(mat, order, order);
+    matrix_create(mat, order, order);
     for(int i = 0; i < order; ++i)
         for(int j = 0; j < order; ++j)
         mat->p[i][i] = (i == j) ? 1 : 0;
 }
 
 void matrix_init_with(Matrix *mat, int rows, int cols, double p[rows][cols]) {
-    matrix_alloc(mat, rows, cols);
+    matrix_create(mat, rows, cols);
     for(int i = 0; i < rows; ++i)
         for(int j = 0; j < cols; ++j)
             mat->p[i][j] = p[i][j];
 }
 
+void matrix_init_with_diag(Matrix *mat, int order, double diag[order]) {
+    matrix_create(mat, order, order);
+    for(int i = 0; i < order; ++i)
+        for(int j = 0; j < order; ++j)
+            mat->p[i][j] = (i == j) ? diag[i] : 0;
+}
+
 void matrix_init_copy(Matrix *mat, const Matrix *src) {
-    matrix_alloc(mat, src->rows, src->cols);
+    matrix_create(mat, src->rows, src->cols);
     for(int i = 0; i < src->rows; ++i)
         for(int j = 0; j < src->cols; ++j)
             mat->p[i][j] = src->p[i][j];
@@ -72,17 +79,41 @@ void matrix_scale(Matrix *mat, double k) {
             mat->p[i][j] *= k;
 }
 
-void matrix_add(const Matrix *a, const Matrix *b, Matrix *res) {
-    for(int i = 0; i < res->rows; ++i)
-        for(int j = 0; j < res->cols; ++j)
-            res->p[i][j] = a->p[i][j] + b->p[i][j];
+Matrix matrix_add(const Matrix *a, const Matrix *b) {
+    Matrix res;
+    matrix_init(&res, a->rows, a->cols);
+    for(int i = 0; i < res.rows; ++i)
+        for(int j = 0; j < res.cols; ++j)
+            res.p[i][j] = a->p[i][j] + b->p[i][j];
+    return res;
 }
 
-void matrix_prod(const Matrix *a, const Matrix *b, Matrix *res) {
+Matrix matrix_prod(const Matrix *a, const Matrix *b) {
+    Matrix res;
+    matrix_init(&res, a->rows, b->cols);
     for(int i = 0; i < a->rows; ++i)
         for(int j = 0; j < b->cols; ++j)
             for(int k = 0; k < a->cols; ++k)
-                res->p[i][j] += a->p[i][k] * b->p[k][j];
+                res.p[i][j] += a->p[i][k] * b->p[k][j];
+    return res;
+}
+
+// Tests and conditions:
+
+bool matrix_is_square(const Matrix *mat) {
+    return mat->rows == mat->cols;
+}
+
+bool matrix_is_diagonally_dominant(const Matrix *mat) {
+    for(int i = 0; i < mat->rows; ++i) {
+        double s = 0;
+        for(int j = 0; j < mat->cols; ++j) {
+            if(i == j) continue;
+            s += mat->p[i][j];
+        }
+        if(s >= mat->p[i][i]) return false;
+    }
+    return true;
 }
 
 // Solving linear systems of equations:
@@ -94,7 +125,7 @@ static void swap_rows(Matrix *mat, int r1, int r2) {
 }
 
 static void find_pivots(const Matrix *mat, int *pivots) {
-    for(int i = 0; i < mat->rows; ++i) {
+    for(int i = 0; i < mat->rows; ++i)
         for(int j = 0; j < mat->cols; ++j) {
             if(mat->p[i][j] != 0) {
                 pivots[i] = j;
@@ -102,15 +133,14 @@ static void find_pivots(const Matrix *mat, int *pivots) {
             }
             pivots[i] = mat->cols;
         }
-    }
 }
 
-// I'd like to improve this, but I'm stupid :)
-bool matrix_solve(Matrix *a, Matrix *b, Matrix *res) {
+Matrix matrix_solve(Matrix *a, Matrix *b, bool *solution) {
+    *solution = true;
     int aux, pivots[a->rows];
-    find_pivots(a, pivots);
     for(int i = 0; i < a->rows; ++i) {
-        // Step #1: permute rows
+        // Step #1: sort rows by insertion, with pivot indexes as keys
+        find_pivots(a, pivots);
         for(int t = 1; t < a->rows; ++t) {
             aux = pivots[t];
             int u = t - 1;
@@ -122,7 +152,7 @@ bool matrix_solve(Matrix *a, Matrix *b, Matrix *res) {
             }
             pivots[u + 1] = aux;
         }
-        // Step #2: "normalize" current row
+        // Step #2: divide the i-th row by the value of its pivot
         int p = pivots[i];
         if(p >= a->cols) break;
         double c = a->p[i][p];
@@ -137,14 +167,35 @@ bool matrix_solve(Matrix *a, Matrix *b, Matrix *res) {
                 a->p[k][j] -= a->p[i][j] * c;
             b->p[k][0] -= b->p[i][0] * c;
         }
-        // Step #3.5: recover pivot indexes
-        find_pivots(a, pivots);
     }
     // Step #4: finish things off
+    Matrix res;
+    matrix_init(&res, a->rows, 1);
     for(int i = 0; i < a->rows; ++i)
-        if(pivots[i] >= a->rows && b->p[i] != 0)
-            return false;
+        if(pivots[i] >= a->rows && b->p[i] != 0) {
+            // rank(A) < rank(A|B) => no solution
+            *solution = false;
+            return res;
+        }
         else
-            res->p[i][0] = b->p[i][0];
-    return true;
+            res.p[i][0] = b->p[i][0];
+    return res;
+}
+
+Matrix matrix_solve_numerical(Matrix *a, Matrix *b, int iters) {
+    Matrix res;
+    matrix_init_copy(&res, b);
+    if(iters <= 0) iters = 32;
+
+    for(int k = 0; k < iters; ++k) {
+        for(int i = 0; i < res.rows; ++i) {
+            res.p[i][0] = b->p[i][0];
+            for(int j = 0; j < a->cols; ++j) {
+                if(i == j) continue;
+                res.p[i][0] -= a->p[i][j];
+            }
+            res.p[i][0] /= a->p[i][i];
+        }
+    }
+    return res;
 }
