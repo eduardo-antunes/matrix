@@ -1,5 +1,2 @@
-solve
-inverse
-compile_commands.json
+build/
 .cache/
-*.o

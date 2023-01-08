@@ -6,38 +6,30 @@
  */
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <stdbool.h>
 
 #include "matrix.h"
 
 int main(void) {
-    int equations, unknowns;
-    printf("Equations: ");
-    scanf("%d", &equations);
-    printf("Unknowns: ");
-    scanf("%d", &unknowns);
-
-    double q[equations][1];
-    double p[equations][unknowns];
+    double p[2][2], q[2][1];
     printf("Matrix A|B:\n");
-    for(int i = 0; i < equations; ++i) {
-        for(int j = 0; j < unknowns; ++j)
+    for(int i = 0; i < 2; ++i) {
+        for(int j = 0; j < 2; ++j)
             scanf("%lf", &p[i][j]);
         scanf("%lf", &q[i][0]);
     }
 
-    Matrix a, b;
-    matrix_init_with(&a, equations, unknowns, p);
-    matrix_init_with(&b, equations, 1, q);
+    Matrix a, b, x;
+    matrix_init_with(&a, 2, 2, p);
+    matrix_init_with(&b, 2, 1, q);
+    matrix_init(&x, 2, 1);
 
-    bool has_solution;
-    Matrix x = matrix_solve(&a, &b, &has_solution);
-    if(!has_solution)
-        printf("There is no solution to Ax = B\n");
-    else {
+    bool solution = matrix_solve(&a, &b, &x);
+    if(solution) {
         printf("Solution to Ax = B:\n");
         matrix_print(&x);
+    } else {
+        printf("No solution to Ax = B\n");
     }
 
     matrix_free(&a);
