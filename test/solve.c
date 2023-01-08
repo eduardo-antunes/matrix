@@ -11,17 +11,23 @@
 #include "matrix.h"
 
 int main(void) {
-    double p[2][2], q[2][1];
-    printf("Matrix A|B:\n");
-    for(int i = 0; i < 2; ++i) {
-        for(int j = 0; j < 2; ++j)
+    int equations, unknowns;
+    printf("Equations: ");
+    scanf("%d", &equations);
+    printf("Unknowns: ");
+    scanf("%d", &unknowns);
+
+    double p[equations][unknowns], q[equations][1];
+    printf("Matrix A|B (%dx%d):\n", equations, unknowns + 1);
+    for(int i = 0; i < equations; ++i) {
+        for(int j = 0; j < unknowns; ++j)
             scanf("%lf", &p[i][j]);
         scanf("%lf", &q[i][0]);
     }
 
     Matrix a, b;
-    matrix_init_with(&a, 2, 2, p);
-    matrix_init_with(&b, 2, 1, q);
+    matrix_init_with(&a, equations, unknowns, p);
+    matrix_init_with(&b, equations, 1, q);
 
     bool solution;
     Matrix x = matrix_solve(&a, &b, &solution);

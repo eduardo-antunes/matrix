@@ -81,7 +81,7 @@ void matrix_scale(Matrix *mat, double k) {
 
 Matrix matrix_add(const Matrix *a, const Matrix *b) {
     Matrix res;
-    matrix_init(&res, a->rows, a->cols);
+    matrix_create(&res, a->rows, a->cols);
     for(int i = 0; i < res.rows; ++i)
         for(int j = 0; j < res.cols; ++j)
             res.p[i][j] = a->p[i][j] + b->p[i][j];
@@ -96,6 +96,15 @@ Matrix matrix_prod(const Matrix *a, const Matrix *b) {
             for(int k = 0; k < a->cols; ++k)
                 res.p[i][j] += a->p[i][k] * b->p[k][j];
     return res;
+}
+
+Matrix matrix_transpose(const Matrix *mat) {
+    Matrix tr;
+    matrix_create(&tr, mat->cols, mat->rows);
+    for(int i = 0; i < tr.rows; ++i)
+        for(int j = 0; j < tr.cols; ++j)
+            tr.p[i][j] = mat->p[j][i];
+    return tr;
 }
 
 // Tests and conditions:
@@ -170,7 +179,7 @@ Matrix matrix_solve(Matrix *a, Matrix *b, bool *solution) {
     }
     // Step #4: finish things off
     Matrix res;
-    matrix_init(&res, a->rows, 1);
+    matrix_create(&res, a->rows, 1);
     for(int i = 0; i < a->rows; ++i)
         if(pivots[i] >= a->rows && b->p[i] != 0) {
             // rank(A) < rank(A|B) => no solution
@@ -184,15 +193,15 @@ Matrix matrix_solve(Matrix *a, Matrix *b, bool *solution) {
 
 Matrix matrix_solve_numerical(Matrix *a, Matrix *b, int iters) {
     Matrix res;
-    matrix_init_copy(&res, b);
-    if(iters <= 0) iters = 32;
+    matrix_init(&res, a->rows, 1);
+    if(iters <= 0) iters = DEFAULT_GAUSS_SEIDEL_ITERS;
 
     for(int k = 0; k < iters; ++k) {
         for(int i = 0; i < res.rows; ++i) {
             res.p[i][0] = b->p[i][0];
-            for(int j = 0; j < a->cols; ++j) {
+            for(int j = 0; j < res.rows; ++j) {
                 if(i == j) continue;
-                res.p[i][0] -= a->p[i][j];
+                res.p[i][0] -= a->p[i][j] * res.p[j][0];
             }
             res.p[i][0] /= a->p[i][i];
         }

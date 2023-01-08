@@ -39,15 +39,19 @@ Matrix matrix_add(const Matrix *a, const Matrix *b);
 
 Matrix matrix_prod(const Matrix *a, const Matrix *b);
 
+Matrix matrix_transpose(const Matrix *mat);
+
 // Tests and conditions:
 
 bool matrix_is_square(const Matrix *mat);
 
-bool matrixis_is_diagonally_dominant(const Matrix *mat);
+bool matrix_is_diagonally_dominant(const Matrix *mat);
 
 // Solving linear systems of equations:
 
 Matrix matrix_solve(Matrix *a, Matrix *b, bool *solution);
+
+#define DEFAULT_GAUSS_SEIDEL_ITERS 64
 
 /* This implements the Gauss-Seidel algorithm. As such, it requires
  * matrix A to be a square matrix. To guarantee convergence, it also
