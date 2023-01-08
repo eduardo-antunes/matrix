@@ -51,12 +51,14 @@ bool matrix_is_diagonally_dominant(const Matrix *mat);
 
 Matrix matrix_solve(Matrix *a, Matrix *b, bool *solution);
 
+Matrix matrix_solve_const(const Matrix *a, const Matrix *b, bool *solution);
+
 #define DEFAULT_GAUSS_SEIDEL_ITERS 64
 
 /* This implements the Gauss-Seidel algorithm. As such, it requires
  * matrix A to be a square matrix. To guarantee convergence, it also
  * must be strictly diagonally dominant.
  */
-Matrix matrix_solve_numerical(Matrix *a, Matrix *b, int iters);
+Matrix matrix_solve_numerical(const Matrix *a, const Matrix *b, int iters);
 
 #endif // MATRIX_H

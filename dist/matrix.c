@@ -32,7 +32,7 @@ void matrix_init_id(Matrix *mat, int order) {
     matrix_create(mat, order, order);
     for(int i = 0; i < order; ++i)
         for(int j = 0; j < order; ++j)
-        mat->p[i][i] = (i == j) ? 1 : 0;
+            mat->p[i][i] = (i == j) ? 1 : 0;
 }
 
 void matrix_init_with(Matrix *mat, int rows, int cols, double p[rows][cols]) {
@@ -191,7 +191,18 @@ Matrix matrix_solve(Matrix *a, Matrix *b, bool *solution) {
     return res;
 }
 
-Matrix matrix_solve_numerical(Matrix *a, Matrix *b, int iters) {
+Matrix matrix_solve_const(const Matrix *a, const Matrix *b, bool *solution) {
+    Matrix _a, _b;
+    matrix_init_copy(&_a, a);
+    matrix_init_copy(&_b, b);
+
+    Matrix res = matrix_solve(&_a, &_b, solution);
+    matrix_free(&_a);
+    matrix_free(&_b);
+    return res;
+}
+
+Matrix matrix_solve_numerical(const Matrix *a, const Matrix *b, int iters) {
     Matrix res;
     matrix_init(&res, a->rows, 1);
     if(iters <= 0) iters = DEFAULT_GAUSS_SEIDEL_ITERS;

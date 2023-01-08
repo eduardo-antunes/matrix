@@ -30,7 +30,7 @@ int main(void) {
     matrix_init_with(&b, equations, 1, q);
 
     bool solution;
-    Matrix x = matrix_solve(&a, &b, &solution);
+    Matrix x = matrix_solve_const(&a, &b, &solution);
     if(solution) {
         printf("Solution to Ax = B:\n");
         matrix_print(&x);
