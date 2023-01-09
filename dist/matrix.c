@@ -32,7 +32,7 @@ void matrix_init_id(Matrix *mat, int order) {
     matrix_create(mat, order, order);
     for(int i = 0; i < order; ++i)
         for(int j = 0; j < order; ++j)
-            mat->p[i][i] = (i == j) ? 1 : 0;
+            mat->p[i][j] = (i == j) ? 1 : 0;
 }
 
 void matrix_init_with(Matrix *mat, int rows, int cols, double p[rows][cols]) {
@@ -143,6 +143,67 @@ static void find_pivots(const Matrix *mat, int *pivots) {
             pivots[i] = mat->cols;
         }
 }
+
+void matrix_reduce(Matrix *mat) {
+    int aux, pivots[mat->rows];
+    for(int i = 0; i < mat->rows; ++i) {
+        // Step #1: sort rows by insertion, with pivot indexes as keys
+        find_pivots(mat, pivots);
+        for(int t = 1; t < mat->rows; ++t) {
+            aux = pivots[t];
+            int u = t - 1;
+            while(u >= 0 && aux < pivots[u]) {
+                swap_rows(mat, u, u + 1);
+                pivots[u + 1] = pivots[u];
+                --u;
+            }
+            pivots[u + 1] = aux;
+        }
+        // Step #2: divide the i-th row by the value of its pivot
+        int p = pivots[i];
+        if(p >= mat->cols) break;
+        double c = mat->p[i][p];
+        for(int j = 0; j < mat->cols; ++j)
+            mat->p[i][j] /= c;
+        // Step #3: gaussian elimination
+        for(int k = 0; k < mat->rows; ++k) {
+            if(k == i) continue;
+            c = mat->p[k][p];
+            for(int j = 0; j < mat->cols; ++j)
+                mat->p[k][j] -= mat->p[i][j] * c;
+        }
+    }
+}
+
+Matrix matrix_augment(const Matrix *a, const Matrix *b) {
+    Matrix ab;
+    matrix_create(&ab, a->rows, a->cols + b->cols);
+    for(int i = 0; i < ab.rows; ++i)
+        for(int j = 0; j < ab.cols; ++j)
+            ab.p[i][j] = (j < a->cols) ?
+                a->p[i][j] : b->p[i][j - a->cols];
+    return ab;
+}
+
+Matrix matrix_inverse(const Matrix *mat) {
+    // Textbook method of inversion
+    Matrix id, inv;
+    matrix_create(&inv, mat->rows, mat->cols);
+    matrix_init_id(&id, mat->rows);
+
+    Matrix aug = matrix_augment(mat, &id);
+    // reduce(A|I) = I|inv(A)
+    matrix_reduce(&aug);
+    for(int i = 0; i < mat->rows; ++i)
+        for(int j = 0; j < mat->cols; ++j)
+            inv.p[i][j] = aug.p[i][j + mat->cols];
+
+    matrix_free(&aug);
+    matrix_free(&id);
+    return inv;
+}
+
+// Oh my god some code duplication ;-;
 
 Matrix matrix_solve(Matrix *a, Matrix *b, bool *solution) {
     *solution = true;

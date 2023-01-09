@@ -15,7 +15,7 @@ typedef struct {
     double **p;
 } Matrix;
 
-// Meta operations:
+// Initializers, print and free:
 
 void matrix_init(Matrix *mat, int rows, int cols);
 
@@ -48,6 +48,12 @@ bool matrix_is_square(const Matrix *mat);
 bool matrix_is_diagonally_dominant(const Matrix *mat);
 
 // Solving linear systems of equations:
+
+void matrix_reduce(Matrix *mat);
+
+Matrix matrix_augment(const Matrix *a, const Matrix *b);
+
+Matrix matrix_inverse(const Matrix *mat);
 
 Matrix matrix_solve(Matrix *a, Matrix *b, bool *solution);
 
