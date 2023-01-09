@@ -17,15 +17,17 @@ typedef struct {
 
 // Initializers, print and free:
 
-void matrix_init(Matrix *mat, int rows, int cols);
+Matrix *matrix_init(int rows, int cols);
 
-void matrix_init_id(Matrix *mat, int order);
+Matrix *matrix_init_id(int order);
 
-void matrix_init_with(Matrix *mat, int rows, int cols, double p[rows][cols]);
+Matrix *matrix_init_with(int rows, int cols, double p[rows][cols]);
 
-void matrix_init_with_diag(Matrix *mat, int order, double diag[order]);
+Matrix *matrix_init_with_arr(int rows, int cols, double p[rows * cols]);
 
-void matrix_init_copy(Matrix *mat, const Matrix *src);
+Matrix *matrix_init_with_diag(int order, double diag[order]);
+
+Matrix *matrix_init_copy(const Matrix *src);
 
 void matrix_print(const Matrix *mat);
 
@@ -35,11 +37,13 @@ void matrix_free(Matrix *mat);
 
 void matrix_scale(Matrix *mat, double k);
 
-Matrix matrix_add(const Matrix *a, const Matrix *b);
+Matrix *matrix_scale_const(const Matrix *mat, double k);
 
-Matrix matrix_prod(const Matrix *a, const Matrix *b);
+Matrix *matrix_add(const Matrix *a, const Matrix *b);
 
-Matrix matrix_transpose(const Matrix *mat);
+Matrix *matrix_prod(const Matrix *a, const Matrix *b);
+
+Matrix *matrix_transpose(const Matrix *mat);
 
 // Tests and conditions:
 
@@ -51,13 +55,15 @@ bool matrix_is_diagonally_dominant(const Matrix *mat);
 
 void matrix_reduce(Matrix *mat);
 
-Matrix matrix_augment(const Matrix *a, const Matrix *b);
+Matrix *matrix_reduce_const(const Matrix *mat);
 
-Matrix matrix_inverse(const Matrix *mat);
+Matrix *matrix_augment(const Matrix *a, const Matrix *b);
 
-Matrix matrix_solve(Matrix *a, Matrix *b, bool *solution);
+Matrix *matrix_inverse(const Matrix *mat);
 
-Matrix matrix_solve_const(const Matrix *a, const Matrix *b, bool *solution);
+Matrix *matrix_solve(Matrix *a, Matrix *b, bool *solution);
+
+Matrix *matrix_solve_const(const Matrix *a, const Matrix *b, bool *solution);
 
 #define DEFAULT_GAUSS_SEIDEL_ITERS 64
 
@@ -65,6 +71,6 @@ Matrix matrix_solve_const(const Matrix *a, const Matrix *b, bool *solution);
  * matrix A to be a square matrix. To guarantee convergence, it also
  * must be strictly diagonally dominant.
  */
-Matrix matrix_solve_numerical(const Matrix *a, const Matrix *b, int iters);
+Matrix *matrix_solve_numerical(const Matrix *a, const Matrix *b, int iters);
 
 #endif // MATRIX_H

@@ -20,20 +20,16 @@ int main(void) {
         for(int j = 0; j < n; ++j)
             scanf("%lf", &p[i][j]);
 
-    Matrix q, _q;
-    matrix_init_with(&q, n, n, p);
-    matrix_init_copy(&_q, &q);
+    Matrix *q = matrix_init_with(n, n, p);
+    Matrix *r = matrix_reduce_const(q);
+    printf("Matrix Q in reduced echelon form:\n");
+    matrix_print(r);
 
-    matrix_reduce(&_q);
-    printf("Matrix Q in row reduced echelon form:\n");
-    matrix_print(&_q);
-    matrix_free(&_q);
-
-    _q = matrix_inverse(&q);
+    r = matrix_inverse(q);
     printf("Inverse of matrix Q:\n");
-    matrix_print(&_q);
+    matrix_print(r);
 
-    matrix_free(&q);
-    matrix_free(&_q);
+    matrix_free(q);
+    matrix_free(r);
     return 0;
 }

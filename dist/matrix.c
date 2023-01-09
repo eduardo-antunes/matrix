@@ -11,49 +11,64 @@
 
 #include "matrix.h"
 
-// Meta operations:
+// Initializers, free and print:
 
-static void matrix_create(Matrix *mat, int rows, int cols) {
+static Matrix *matrix_alloc(int rows, int cols) {
+    Matrix *mat = (Matrix*) malloc(sizeof(Matrix));
     mat->p = (double**) malloc(rows * sizeof(double*));
     for(int i = 0; i < rows; ++i)
         mat->p[i] = (double*) malloc(cols * sizeof(double));
     mat->rows = rows;
     mat->cols = cols;
+    return mat;
 }
 
-void matrix_init(Matrix *mat, int rows, int cols) {
-    matrix_create(mat, rows, cols);
+Matrix *matrix_init(int rows, int cols) {
+    Matrix *mat = matrix_alloc(rows, cols);
     for(int i = 0; i < rows; ++i)
         for(int j = 0; j < cols; ++j)
             mat->p[i][j] = 0;
+    return mat;
 }
 
-void matrix_init_id(Matrix *mat, int order) {
-    matrix_create(mat, order, order);
+Matrix *matrix_init_id(int order) {
+    Matrix *mat = matrix_alloc(order, order);
     for(int i = 0; i < order; ++i)
         for(int j = 0; j < order; ++j)
             mat->p[i][j] = (i == j) ? 1 : 0;
+    return mat;
 }
 
-void matrix_init_with(Matrix *mat, int rows, int cols, double p[rows][cols]) {
-    matrix_create(mat, rows, cols);
+Matrix *matrix_init_with(int rows, int cols, double p[rows][cols]) {
+    Matrix *mat = matrix_alloc(rows, cols);
     for(int i = 0; i < rows; ++i)
         for(int j = 0; j < cols; ++j)
             mat->p[i][j] = p[i][j];
+    return mat;
 }
 
-void matrix_init_with_diag(Matrix *mat, int order, double diag[order]) {
-    matrix_create(mat, order, order);
+Matrix *matrix_init_with_arr(int rows, int cols, double p[rows * cols]) {
+    Matrix *mat = matrix_alloc(rows, cols);
+    for(int i = 0; i < rows; ++i)
+        for(int j = 0; j < cols; ++j)
+            mat->p[i][j] = p[(cols * i) + j];
+    return mat;
+}
+
+Matrix *matrix_init_with_diag(int order, double diag[order]) {
+    Matrix *mat = matrix_alloc(order, order);
     for(int i = 0; i < order; ++i)
         for(int j = 0; j < order; ++j)
             mat->p[i][j] = (i == j) ? diag[i] : 0;
+    return mat;
 }
 
-void matrix_init_copy(Matrix *mat, const Matrix *src) {
-    matrix_create(mat, src->rows, src->cols);
+Matrix *matrix_init_copy(const Matrix *src) {
+    Matrix *mat = matrix_alloc(src->rows, src->cols);
     for(int i = 0; i < src->rows; ++i)
         for(int j = 0; j < src->cols; ++j)
             mat->p[i][j] = src->p[i][j];
+    return mat;
 }
 
 void matrix_print(const Matrix *mat) {
@@ -69,6 +84,7 @@ void matrix_free(Matrix *mat) {
     for(int i = 0; i < mat->rows; ++i)
         free(mat->p[i]);
     free(mat->p);
+    free(mat);
 }
 
 // Basic arithmetic operations:
@@ -79,31 +95,36 @@ void matrix_scale(Matrix *mat, double k) {
             mat->p[i][j] *= k;
 }
 
-Matrix matrix_add(const Matrix *a, const Matrix *b) {
-    Matrix res;
-    matrix_create(&res, a->rows, a->cols);
-    for(int i = 0; i < res.rows; ++i)
-        for(int j = 0; j < res.cols; ++j)
-            res.p[i][j] = a->p[i][j] + b->p[i][j];
+Matrix *matrix_scale_const(const Matrix *mat, double k) {
+    Matrix *res = matrix_alloc(mat->rows, mat->cols);
+    for(int i = 0; i < mat->rows; ++i)
+        for(int j = 0; j < mat->cols; ++j)
+            res->p[i][j] *= k;
     return res;
 }
 
-Matrix matrix_prod(const Matrix *a, const Matrix *b) {
-    Matrix res;
-    matrix_init(&res, a->rows, b->cols);
+Matrix *matrix_add(const Matrix *a, const Matrix *b) {
+    Matrix *res = matrix_alloc(a->rows, a->cols);
+    for(int i = 0; i < res->rows; ++i)
+        for(int j = 0; j < res->cols; ++j)
+            res->p[i][j] = a->p[i][j] + b->p[i][j];
+    return res;
+}
+
+Matrix *matrix_prod(const Matrix *a, const Matrix *b) {
+    Matrix *res = matrix_init(a->rows, b->cols);
     for(int i = 0; i < a->rows; ++i)
         for(int j = 0; j < b->cols; ++j)
             for(int k = 0; k < a->cols; ++k)
-                res.p[i][j] += a->p[i][k] * b->p[k][j];
+                res->p[i][j] += a->p[i][k] * b->p[k][j];
     return res;
 }
 
-Matrix matrix_transpose(const Matrix *mat) {
-    Matrix tr;
-    matrix_create(&tr, mat->cols, mat->rows);
-    for(int i = 0; i < tr.rows; ++i)
-        for(int j = 0; j < tr.cols; ++j)
-            tr.p[i][j] = mat->p[j][i];
+Matrix *matrix_transpose(const Matrix *mat) {
+    Matrix *tr = matrix_alloc(mat->cols, mat->rows);
+    for(int i = 0; i < tr->rows; ++i)
+        for(int j = 0; j < tr->cols; ++j)
+            tr->p[i][j] = mat->p[j][i];
     return tr;
 }
 
@@ -175,37 +196,41 @@ void matrix_reduce(Matrix *mat) {
     }
 }
 
-Matrix matrix_augment(const Matrix *a, const Matrix *b) {
-    Matrix ab;
-    matrix_create(&ab, a->rows, a->cols + b->cols);
-    for(int i = 0; i < ab.rows; ++i)
-        for(int j = 0; j < ab.cols; ++j)
-            ab.p[i][j] = (j < a->cols) ?
+Matrix *matrix_reduce_const(const Matrix *mat) {
+    Matrix *res = matrix_init_copy(mat);
+    matrix_reduce(res);
+    return res;
+}
+
+Matrix *matrix_augment(const Matrix *a, const Matrix *b) {
+    Matrix *ab = matrix_alloc(a->rows, a->cols + b->cols);
+    for(int i = 0; i < ab->rows; ++i)
+        for(int j = 0; j < ab->cols; ++j)
+            ab->p[i][j] = (j < a->cols) ?
                 a->p[i][j] : b->p[i][j - a->cols];
     return ab;
 }
 
-Matrix matrix_inverse(const Matrix *mat) {
+Matrix *matrix_inverse(const Matrix *mat) {
     // Textbook method of inversion
-    Matrix id, inv;
-    matrix_create(&inv, mat->rows, mat->cols);
-    matrix_init_id(&id, mat->rows);
+    Matrix *inv = matrix_alloc(mat->rows, mat->cols);
+    Matrix *id = matrix_init_id(mat->rows);
 
-    Matrix aug = matrix_augment(mat, &id);
+    Matrix *aug = matrix_augment(mat, id);
     // reduce(A|I) = I|inv(A)
-    matrix_reduce(&aug);
+    matrix_reduce(aug);
     for(int i = 0; i < mat->rows; ++i)
         for(int j = 0; j < mat->cols; ++j)
-            inv.p[i][j] = aug.p[i][j + mat->cols];
+            inv->p[i][j] = aug->p[i][j + mat->cols];
 
-    matrix_free(&aug);
-    matrix_free(&id);
+    matrix_free(aug);
+    matrix_free(id);
     return inv;
 }
 
 // Oh my god some code duplication ;-;
 
-Matrix matrix_solve(Matrix *a, Matrix *b, bool *solution) {
+Matrix *matrix_solve(Matrix *a, Matrix *b, bool *solution) {
     *solution = true;
     int aux, pivots[a->rows];
     for(int i = 0; i < a->rows; ++i) {
@@ -239,8 +264,7 @@ Matrix matrix_solve(Matrix *a, Matrix *b, bool *solution) {
         }
     }
     // Step #4: finish things off
-    Matrix res;
-    matrix_create(&res, a->rows, 1);
+    Matrix *res = matrix_alloc(a->rows, 1);
     for(int i = 0; i < a->rows; ++i)
         if(pivots[i] >= a->rows && b->p[i] != 0) {
             // rank(A) < rank(A|B) => no solution
@@ -248,34 +272,32 @@ Matrix matrix_solve(Matrix *a, Matrix *b, bool *solution) {
             return res;
         }
         else
-            res.p[i][0] = b->p[i][0];
+            res->p[i][0] = b->p[i][0];
     return res;
 }
 
-Matrix matrix_solve_const(const Matrix *a, const Matrix *b, bool *solution) {
-    Matrix _a, _b;
-    matrix_init_copy(&_a, a);
-    matrix_init_copy(&_b, b);
+Matrix *matrix_solve_const(const Matrix *a, const Matrix *b, bool *solution) {
+    Matrix *_a = matrix_init_copy(a);
+    Matrix *_b = matrix_init_copy(b);
 
-    Matrix res = matrix_solve(&_a, &_b, solution);
-    matrix_free(&_a);
-    matrix_free(&_b);
+    Matrix *res = matrix_solve(_a, _b, solution);
+    matrix_free(_a);
+    matrix_free(_b);
     return res;
 }
 
-Matrix matrix_solve_numerical(const Matrix *a, const Matrix *b, int iters) {
-    Matrix res;
-    matrix_init(&res, a->rows, 1);
+Matrix *matrix_solve_numerical(const Matrix *a, const Matrix *b, int iters) {
+    Matrix *res = matrix_init(a->rows, 1);
     if(iters <= 0) iters = DEFAULT_GAUSS_SEIDEL_ITERS;
 
     for(int k = 0; k < iters; ++k) {
-        for(int i = 0; i < res.rows; ++i) {
-            res.p[i][0] = b->p[i][0];
-            for(int j = 0; j < res.rows; ++j) {
+        for(int i = 0; i < res->rows; ++i) {
+            res->p[i][0] = b->p[i][0];
+            for(int j = 0; j < res->rows; ++j) {
                 if(i == j) continue;
-                res.p[i][0] -= a->p[i][j] * res.p[j][0];
+                res->p[i][0] -= a->p[i][j] * res->p[j][0];
             }
-            res.p[i][0] /= a->p[i][i];
+            res->p[i][0] /= a->p[i][i];
         }
     }
     return res;

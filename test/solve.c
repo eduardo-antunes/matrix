@@ -25,21 +25,20 @@ int main(void) {
         scanf("%lf", &q[i][0]);
     }
 
-    Matrix a, b;
-    matrix_init_with(&a, equations, unknowns, p);
-    matrix_init_with(&b, equations, 1, q);
+    Matrix *a = matrix_init_with(equations, unknowns, p);
+    Matrix *b = matrix_init_with(equations, 1, q);
 
     bool solution;
-    Matrix x = matrix_solve_const(&a, &b, &solution);
+    Matrix *x = matrix_solve_const(a, b, &solution);
     if(solution) {
         printf("Solution to Ax = B:\n");
-        matrix_print(&x);
+        matrix_print(x);
     } else {
         printf("No solution to Ax = B\n");
     }
 
-    matrix_free(&a);
-    matrix_free(&b);
-    matrix_free(&x);
+    matrix_free(a);
+    matrix_free(b);
+    matrix_free(x);
     return 0;
 }

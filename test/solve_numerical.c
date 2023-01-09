@@ -22,22 +22,21 @@ int main(void) {
         scanf("%lf", &q[i][0]);
     }
 
-    Matrix a, b;
-    matrix_init_with(&a, equations, equations, p);
-    matrix_init_with(&b, equations, 1, q);
+    Matrix *a = matrix_init_with(equations, equations, p);
+    Matrix *b = matrix_init_with(equations, 1, q);
 
-    if(!matrix_is_diagonally_dominant(&a))
+    if(!matrix_is_diagonally_dominant(a))
         printf("A is not diagonally dominant. Thus, convergence is not "
                 "guaranteed, and the results might be imprecise\n");
 
     // You can pass any number less than or equal to 0 for the iterations
     // to use the default chosen by the library.
-    Matrix x = matrix_solve_numerical(&a, &b, -1);
+    Matrix *x = matrix_solve_numerical(a, b, -1);
     printf("Solution to Ax = B, obtained by Gauss-Seidel:\n");
-    matrix_print(&x);
+    matrix_print(x);
 
-    matrix_free(&a);
-    matrix_free(&b);
-    matrix_free(&x);
+    matrix_free(a);
+    matrix_free(b);
+    matrix_free(x);
     return 0;
 }
