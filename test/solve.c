@@ -17,19 +17,21 @@ int main(void) {
     printf("Unknowns: ");
     scanf("%d", &unknowns);
 
-    double p[equations][unknowns], q[equations][1];
+    double value;
+    Matrix *a = matrix_alloc(equations, unknowns);
+    Matrix *b = matrix_alloc(equations, 1);
     printf("Matrix A|B (%dx%d):\n", equations, unknowns + 1);
     for(int i = 0; i < equations; ++i) {
-        for(int j = 0; j < unknowns; ++j)
-            scanf("%lf", &p[i][j]);
-        scanf("%lf", &q[i][0]);
+        for(int j = 0; j < unknowns; ++j) {
+            scanf("%lf", &value);
+            matrix_set(a, i, j, value);
+        }
+        scanf("%lf", &value);
+        matrix_set(b, i, 0, value);
     }
 
-    Matrix *a = matrix_init_with(equations, unknowns, p);
-    Matrix *b = matrix_init_with(equations, 1, q);
-
     bool solution;
-    Matrix *x = matrix_solve_const(a, b, &solution);
+    Matrix *x = matrix_solve(a, b, &solution);
     if(solution) {
         printf("Solution to Ax = B:\n");
         matrix_print(x);

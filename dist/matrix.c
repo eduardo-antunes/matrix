@@ -13,58 +13,43 @@
 
 // Initializers, free and print:
 
-static Matrix *matrix_alloc(int rows, int cols) {
+Matrix *matrix_alloc(int rows, int cols) {
     Matrix *mat = (Matrix*) malloc(sizeof(Matrix));
+    if(mat == NULL) return NULL;
+
     mat->p = (double**) malloc(rows * sizeof(double*));
-    for(int i = 0; i < rows; ++i)
+    if(mat->p == NULL) return NULL;
+
+    for(int i = 0; i < rows; ++i) {
         mat->p[i] = (double*) malloc(cols * sizeof(double));
+        if(mat->p[i] == NULL) return NULL;
+    }
     mat->rows = rows;
     mat->cols = cols;
     return mat;
 }
 
-Matrix *matrix_init(int rows, int cols) {
+Matrix *matrix_calloc(int rows, int cols) {
     Matrix *mat = matrix_alloc(rows, cols);
+    if(mat == NULL) return NULL;
     for(int i = 0; i < rows; ++i)
         for(int j = 0; j < cols; ++j)
             mat->p[i][j] = 0;
     return mat;
 }
 
-Matrix *matrix_init_id(int order) {
+Matrix *matrix_identity(int order) {
     Matrix *mat = matrix_alloc(order, order);
+    if(mat == NULL) return NULL;
     for(int i = 0; i < order; ++i)
         for(int j = 0; j < order; ++j)
             mat->p[i][j] = (i == j) ? 1 : 0;
     return mat;
 }
 
-Matrix *matrix_init_with(int rows, int cols, double p[rows][cols]) {
-    Matrix *mat = matrix_alloc(rows, cols);
-    for(int i = 0; i < rows; ++i)
-        for(int j = 0; j < cols; ++j)
-            mat->p[i][j] = p[i][j];
-    return mat;
-}
-
-Matrix *matrix_init_with_arr(int rows, int cols, double p[rows * cols]) {
-    Matrix *mat = matrix_alloc(rows, cols);
-    for(int i = 0; i < rows; ++i)
-        for(int j = 0; j < cols; ++j)
-            mat->p[i][j] = p[(cols * i) + j];
-    return mat;
-}
-
-Matrix *matrix_init_with_diag(int order, double diag[order]) {
-    Matrix *mat = matrix_alloc(order, order);
-    for(int i = 0; i < order; ++i)
-        for(int j = 0; j < order; ++j)
-            mat->p[i][j] = (i == j) ? diag[i] : 0;
-    return mat;
-}
-
-Matrix *matrix_init_copy(const Matrix *src) {
+Matrix *matrix_copy(const Matrix *src) {
     Matrix *mat = matrix_alloc(src->rows, src->cols);
+    if(mat == NULL) return NULL;
     for(int i = 0; i < src->rows; ++i)
         for(int j = 0; j < src->cols; ++j)
             mat->p[i][j] = src->p[i][j];
@@ -87,7 +72,7 @@ void matrix_free(Matrix *mat) {
     free(mat);
 }
 
-// Basic arithmetic operations:
+// Arithmetic operations:
 
 void matrix_scale(Matrix *mat, double k) {
     for(int i = 0; i < mat->rows; ++i)
@@ -112,7 +97,7 @@ Matrix *matrix_add(const Matrix *a, const Matrix *b) {
 }
 
 Matrix *matrix_prod(const Matrix *a, const Matrix *b) {
-    Matrix *res = matrix_init(a->rows, b->cols);
+    Matrix *res = matrix_calloc(a->rows, b->cols);
     for(int i = 0; i < a->rows; ++i)
         for(int j = 0; j < b->cols; ++j)
             for(int k = 0; k < a->cols; ++k)
@@ -129,6 +114,16 @@ Matrix *matrix_transpose(const Matrix *mat) {
 }
 
 // Tests and conditions:
+
+bool matrix_are_equal(const Matrix *a, const Matrix *b) {
+    if(a->rows != b->rows || a->cols != b->cols) 
+        return false;
+    for(int i = 0; i < a->rows; ++i)
+        for(int j = 0; j < a->cols; ++j)
+            if(a->p[i][j] != b->p[i][j])
+                return false;
+    return true;
+}
 
 bool matrix_is_square(const Matrix *mat) {
     return mat->rows == mat->cols;
@@ -197,7 +192,7 @@ void matrix_reduce(Matrix *mat) {
 }
 
 Matrix *matrix_reduce_const(const Matrix *mat) {
-    Matrix *res = matrix_init_copy(mat);
+    Matrix *res = matrix_copy(mat);
     matrix_reduce(res);
     return res;
 }
@@ -214,7 +209,7 @@ Matrix *matrix_augment(const Matrix *a, const Matrix *b) {
 Matrix *matrix_inverse(const Matrix *mat) {
     // Textbook method of inversion
     Matrix *inv = matrix_alloc(mat->rows, mat->cols);
-    Matrix *id = matrix_init_id(mat->rows);
+    Matrix *id = matrix_identity(mat->rows);
 
     Matrix *aug = matrix_augment(mat, id);
     // reduce(A|I) = I|inv(A)
@@ -231,7 +226,7 @@ Matrix *matrix_inverse(const Matrix *mat) {
 // Oh my god some code duplication ;-;
 
 Matrix *matrix_solve(Matrix *a, Matrix *b, bool *solution) {
-    *solution = true;
+    if(solution != NULL) *solution = true;
     int aux, pivots[a->rows];
     for(int i = 0; i < a->rows; ++i) {
         // Step #1: sort rows by insertion, with pivot indexes as keys
@@ -268,7 +263,7 @@ Matrix *matrix_solve(Matrix *a, Matrix *b, bool *solution) {
     for(int i = 0; i < a->rows; ++i)
         if(pivots[i] >= a->rows && b->p[i] != 0) {
             // rank(A) < rank(A|B) => no solution
-            *solution = false;
+            if(solution != NULL) *solution = false;
             return res;
         }
         else
@@ -277,8 +272,8 @@ Matrix *matrix_solve(Matrix *a, Matrix *b, bool *solution) {
 }
 
 Matrix *matrix_solve_const(const Matrix *a, const Matrix *b, bool *solution) {
-    Matrix *_a = matrix_init_copy(a);
-    Matrix *_b = matrix_init_copy(b);
+    Matrix *_a = matrix_copy(a);
+    Matrix *_b = matrix_copy(b);
 
     Matrix *res = matrix_solve(_a, _b, solution);
     matrix_free(_a);
@@ -287,7 +282,7 @@ Matrix *matrix_solve_const(const Matrix *a, const Matrix *b, bool *solution) {
 }
 
 Matrix *matrix_solve_numerical(const Matrix *a, const Matrix *b, int iters) {
-    Matrix *res = matrix_init(a->rows, 1);
+    Matrix *res = matrix_calloc(a->rows, 1);
     if(iters <= 0) iters = DEFAULT_GAUSS_SEIDEL_ITERS;
 
     for(int k = 0; k < iters; ++k) {
@@ -302,3 +297,11 @@ Matrix *matrix_solve_numerical(const Matrix *a, const Matrix *b, int iters) {
     }
     return res;
 }
+
+// Access elements of a matrix: (external declarations)
+
+extern double matrix_get(const Matrix*, const int, const int);
+
+extern double *matrix_get_ptr(const Matrix*, const int, const int);
+
+extern void matrix_set(Matrix*, const int, const int, double);

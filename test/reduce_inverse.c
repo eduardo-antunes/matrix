@@ -14,16 +14,19 @@ int main(void) {
     printf("Order of the matrix Q: ");
     scanf("%d", &n);
 
-    double p[n][n];
+    double value;
+    Matrix *q = matrix_alloc(n, n);
     printf("Matrix Q:\n");
     for(int i = 0; i < n; ++i)
-        for(int j = 0; j < n; ++j)
-            scanf("%lf", &p[i][j]);
+        for(int j = 0; j < n; ++j) {
+            scanf("%lf", &value);
+            matrix_set(q, i, j, value);
+        }
 
-    Matrix *q = matrix_init_with(n, n, p);
     Matrix *r = matrix_reduce_const(q);
     printf("Matrix Q in reduced echelon form:\n");
     matrix_print(r);
+    matrix_free(r);
 
     r = matrix_inverse(q);
     printf("Inverse of matrix Q:\n");

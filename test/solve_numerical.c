@@ -14,16 +14,18 @@ int main(void) {
     printf("Equations: ");
     scanf("%d", &equations);
 
-    double p[equations][equations], q[equations][1];
+    double value;
+    Matrix *a = matrix_alloc(equations, equations);
+    Matrix *b = matrix_alloc(equations, 1);
     printf("Matrix A|B (%dx%d):\n", equations, equations + 1);
     for(int i = 0; i < equations; ++i) {
-        for(int j = 0; j < equations; ++j)
-            scanf("%lf", &p[i][j]);
-        scanf("%lf", &q[i][0]);
+        for(int j = 0; j < equations; ++j) {
+            scanf("%lf", &value);
+            matrix_set(a, i, j, value);
+        }
+        scanf("%lf", &value);
+        matrix_set(b, i, 0, value);
     }
-
-    Matrix *a = matrix_init_with(equations, equations, p);
-    Matrix *b = matrix_init_with(equations, 1, q);
 
     if(!matrix_is_diagonally_dominant(a))
         printf("A is not diagonally dominant. Thus, convergence is not "

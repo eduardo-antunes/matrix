@@ -17,23 +17,19 @@ typedef struct {
 
 // Initializers, print and free:
 
-Matrix *matrix_init(int rows, int cols);
+Matrix *matrix_alloc(int rows, int cols);
 
-Matrix *matrix_init_id(int order);
+Matrix *matrix_calloc(int rows, int cols);
 
-Matrix *matrix_init_with(int rows, int cols, double p[rows][cols]);
+Matrix *matrix_identity(int order);
 
-Matrix *matrix_init_with_arr(int rows, int cols, double p[rows * cols]);
-
-Matrix *matrix_init_with_diag(int order, double diag[order]);
-
-Matrix *matrix_init_copy(const Matrix *src);
+Matrix *matrix_copy(const Matrix *src);
 
 void matrix_print(const Matrix *mat);
 
 void matrix_free(Matrix *mat);
 
-// Basic arithmetic operations:
+// Arithmetic operations:
 
 void matrix_scale(Matrix *mat, double k);
 
@@ -46,6 +42,8 @@ Matrix *matrix_prod(const Matrix *a, const Matrix *b);
 Matrix *matrix_transpose(const Matrix *mat);
 
 // Tests and conditions:
+
+bool matrix_are_equal(const Matrix *a, const Matrix *b);
 
 bool matrix_is_square(const Matrix *mat);
 
@@ -72,5 +70,13 @@ Matrix *matrix_solve_const(const Matrix *a, const Matrix *b, bool *solution);
  * must be strictly diagonally dominant.
  */
 Matrix *matrix_solve_numerical(const Matrix *a, const Matrix *b, int iters);
+
+// Access elements of a matrix:
+
+inline double matrix_get(const Matrix *mat, int i, int j) { return mat->p[i][j]; }
+
+inline void matrix_set(Matrix *mat, int i, int j, double x) { mat->p[i][j] = x; }
+
+inline double *matrix_get_ptr(const Matrix *mat, int i, int j) { return &mat->p[i][j]; }
 
 #endif // MATRIX_H
