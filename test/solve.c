@@ -6,8 +6,6 @@
  */
 
 #include <stdio.h>
-#include <stdbool.h>
-
 #include "matrix.h"
 
 int main(void) {
@@ -30,7 +28,7 @@ int main(void) {
         matrix_set(b, i, 0, value);
     }
 
-    bool solution;
+    int solution;
     Matrix *x = matrix_solve(a, b, &solution);
     if(solution) {
         printf("Solution to Ax = B:\n");

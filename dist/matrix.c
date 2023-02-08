@@ -7,9 +7,13 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
 #include <string.h>
 #include "matrix.h"
+
+// L-value access to matrix elements; this abstracts the
+// specific storage strategy used for the contents of the
+// matrix and simplifies the implementation
+#define MSUB(m, i, j) ((m)->p[(((m)->cols * i) + (j))])
 
 // Access elements of a matrix: (defined in matrix.h)
 
@@ -23,37 +27,37 @@ void matrix_set(Matrix*, int, int, double);
 
 Matrix *matrix_alloc(int rows, int cols) {
     // Allocate the matrix structure
-    Matrix *m = (Matrix *) malloc(sizeof(Matrix));
-    if(m == NULL) return NULL;
+    Matrix *mat = (Matrix *) malloc(sizeof(Matrix));
+    if(mat == NULL) return NULL;
     // Allocate the actual data of the matrix, which will be 
     // stored as a 1D-array in row-major order
-    m->p = (double *) malloc(rows * cols * sizeof(Matrix));
-    if(m->p == NULL) {
-        free(m);
+    mat->p = (double *) malloc(rows * cols * sizeof(Matrix));
+    if(mat->p == NULL) {
+        free(mat);
         return NULL;
     }
     // Fill in the dimensions of the matrix
-    m->rows = rows;
-    m->cols = cols;
-    return m;
+    mat->rows = rows;
+    mat->cols = cols;
+    return mat;
 }
 
 Matrix *matrix_calloc(int rows, int cols) {
-    Matrix *m = matrix_alloc(rows, cols);
-    if(m == NULL) return NULL;
+    Matrix *mat = matrix_alloc(rows, cols);
+    if(mat == NULL) return NULL;
     // Zero-initialize the data
-    memset(m->p, 0, rows * cols * sizeof(double));
-    return m;
+    memset(mat->p, 0, rows * cols * sizeof(double));
+    return mat;
 }
 
 Matrix *matrix_identity(int order) {
-    Matrix *m = matrix_alloc(order, order);
-    if(m == NULL) return NULL;
+    Matrix *mat = matrix_alloc(order, order);
+    if(mat == NULL) return NULL;
     for(int i = 0; i < order; ++i)
         for(int j = 0; j < order; ++j)
             // Data is initialized with the Kronecker delta
-            m->p[m->cols * i + j] = (i == j) ? 1 : 0;
-    return m;
+            MSUB(mat, i, j) = (i == j) ? 1 : 0;
+    return mat;
 }
 
 Matrix *matrix_copy(const Matrix *src) {
@@ -64,33 +68,33 @@ Matrix *matrix_copy(const Matrix *src) {
     return c;
 }
 
-void matrix_print(const Matrix *m) {
-    int last_col = m->cols - 1;
-    for(int i = 0; i < m->rows; ++i) {
+void matrix_print(const Matrix *mat) {
+    int last_col = mat->cols - 1;
+    for(int i = 0; i < mat->rows; ++i) {
         for(int j = 0; j < last_col; ++j)
-            printf("%g ", m->p[m->cols * i + j]);
-        printf("%g\n", m->p[m->cols * i + last_col]);
+            printf("%g ", MSUB(mat, i, j));
+        printf("%g\n", MSUB(mat, i, last_col));
     }
 }
 
-void matrix_free(Matrix *m) {
-    free(m->p);
-    free(m);
+void matrix_free(Matrix *mat) {
+    free(mat->p);
+    free(mat);
 }
 
 // Arithmetic operations:
 
-void matrix_scale(Matrix *m, double k) {
-    for(int i = 0; i < m->rows; ++i)
-        for(int j = 0; j < m->cols; ++j)
-            m->p[m->cols * i + j] *= k;
+void matrix_scale(Matrix *mat, double k) {
+    for(int i = 0; i < mat->rows; ++i)
+        for(int j = 0; j < mat->cols; ++j)
+            MSUB(mat, i, j) *= k;
 }
 
-Matrix *matrix_scale_copy(const Matrix *m, double k) {
-    Matrix *c = matrix_copy(m);
+Matrix *matrix_scale_copy(const Matrix *mat, double k) {
+    Matrix *c = matrix_copy(mat);
     for(int i = 0; i < c->rows; ++i)
         for(int j = 0; j < c->cols; ++j)
-            c->p[c->cols * i + j] *= k;
+            MSUB(c, i, j) *= k;
     return c;
 }
 
@@ -98,8 +102,7 @@ Matrix *matrix_add(const Matrix *a, const Matrix *b) {
     Matrix *res = matrix_alloc(a->rows, a->cols);
     for(int i = 0; i < res->rows; ++i)
         for(int j = 0; j < res->cols; ++j)
-            res->p[res->cols * i + j] = a->p[a->cols * i + j] 
-                + b->p[b->cols * i + j];
+            MSUB(res, i, j) = MSUB(a, i, j) + MSUB(b, i, j);
     return res;
 }
 
@@ -108,79 +111,78 @@ Matrix *matrix_prod(const Matrix *a, const Matrix *b) {
     for(int i = 0; i < a->rows; ++i)
         for(int j = 0; j < b->cols; ++j)
             for(int k = 0; k < a->cols; ++k)
-                res->p[res->cols * i + j] += a->p[a->cols * i + k] 
-                    * b->p[b->cols * k + j];
+                MSUB(res, i, j) += MSUB(a, i, k) * MSUB(b, k, j);
     return res;
 }
 
-Matrix *matrix_transpose(const Matrix *m) {
-    Matrix *tr = matrix_alloc(m->cols, m->rows);
+Matrix *matrix_transpose(const Matrix *mat) {
+    Matrix *tr = matrix_alloc(mat->cols, mat->rows);
     for(int i = 0; i < tr->rows; ++i)
         for(int j = 0; j < tr->cols; ++j)
-            tr->p[tr->cols * i + j] = m->p[m->cols * j + i];
+            MSUB(tr, i, j) = MSUB(mat, j, i);
     return tr;
 }
 
 // Tests and conditions:
 
-bool matrix_are_equal(const Matrix *a, const Matrix *b) {
+int matrix_are_equal(const Matrix *a, const Matrix *b) {
     if(a->rows != b->rows || a->cols != b->cols) 
-        return false;
+        return 0;
     for(int i = 0; i < a->rows; ++i)
         for(int j = 0; j < a->cols; ++j)
-            if(a->p[a->cols * i + j] != b->p[b->cols * i + j])
-                return false;
-    return true;
+            if(MSUB(a, i, j) != MSUB(b, i, j))
+                return 0;
+    return 1;
 }
 
-bool matrix_is_square(const Matrix *mat) {
+int matrix_is_square(const Matrix *mat) {
     return mat->rows == mat->cols;
 }
 
-bool matrix_is_diagonally_dominant(const Matrix *m) {
-    for(int i = 0; i < m->rows; ++i) {
+int matrix_is_diagonally_dominant(const Matrix *mat) {
+    for(int i = 0; i < mat->rows; ++i) {
         double s = 0;
-        for(int j = 0; j < m->cols; ++j) {
+        for(int j = 0; j < mat->cols; ++j) {
             if(i == j) continue;
-            s += m->p[m->cols * i + j];
+            s += MSUB(mat, i, j);
         }
-        if(s >= m->p[m->cols * i + i]) 
-            return false;
+        if(s >= MSUB(mat, i, i)) 
+            return 0;
     }
-    return true;
+    return 1;
 }
 
 // Solving linear systems of equations:
 
-static void swap_rows(Matrix *m, int r1, int r2) {
-    for(int j = 0; j < m->cols; ++j) {
-        double aux = m->p[m->cols * r1 + j];
-        m->p[m->cols * r1 + j] = m->p[m->cols * r2 + j];
-        m->p[m->cols * r2 + j] = aux;
+static void swap_rows(Matrix *mat, int r1, int r2) {
+    for(int j = 0; j < mat->cols; ++j) {
+        double aux = MSUB(mat, r1, j);
+        MSUB(mat, r1, j) = MSUB(mat, r2, j);
+        MSUB(mat, r2, j) = aux;
     }
 }
 
-static void find_pivots(const Matrix *m, int *pivots) {
-    for(int i = 0; i < m->rows; ++i)
-        for(int j = 0; j < m->cols; ++j) {
-            if(m->p[m->cols * i + j] != 0) {
+static void find_pivots(const Matrix *mat, int *pivots) {
+    for(int i = 0; i < mat->rows; ++i)
+        for(int j = 0; j < mat->cols; ++j) {
+            if(MSUB(mat, i, j) != 0) {
                 pivots[i] = j;
                 break;
             }
-            pivots[i] = m->cols;
+            pivots[i] = mat->cols;
         }
 }
 
-void matrix_reduce(Matrix *m) {
-    int aux, pivots[m->rows];
-    for(int i = 0; i < m->rows; ++i) {
+void matrix_reduce(Matrix *mat) {
+    int aux, pivots[mat->rows];
+    for(int i = 0; i < mat->rows; ++i) {
         // Step #1: sort rows by insertion, with pivot indexes as keys
-        find_pivots(m, pivots);
-        for(int t = 1; t < m->rows; ++t) {
+        find_pivots(mat, pivots);
+        for(int t = 1; t < mat->rows; ++t) {
             aux = pivots[t];
             int u = t - 1;
             while(u >= 0 && aux < pivots[u]) {
-                swap_rows(m, u, u + 1);
+                swap_rows(mat, u, u + 1);
                 pivots[u + 1] = pivots[u];
                 --u;
             }
@@ -188,16 +190,16 @@ void matrix_reduce(Matrix *m) {
         }
         // Step #2: divide the i-th row by the value of its pivot
         int p = pivots[i];
-        if(p >= m->cols) break;
-        double c = m->p[m->cols * i + p];
-        for(int j = 0; j < m->cols; ++j)
-            m->p[m->cols * i + j] /= c;
+        if(p >= mat->cols) break;
+        double c = MSUB(mat, i, p);
+        for(int j = 0; j < mat->cols; ++j)
+            MSUB(mat, i, j) /= c;
         // Step #3: gaussian elimination
-        for(int k = 0; k < m->rows; ++k) {
+        for(int k = 0; k < mat->rows; ++k) {
             if(k == i) continue;
-            c = m->p[m->cols * k + p];
-            for(int j = 0; j < m->cols; ++j)
-                m->p[m->cols * k + j] -= m->p[m->cols * i + j] * c;
+            c = MSUB(mat, k, p);
+            for(int j = 0; j < mat->cols; ++j)
+                MSUB(mat, k, j) -= MSUB(mat, i, j) * c;
         }
     }
 }
@@ -212,22 +214,21 @@ Matrix *matrix_augment(const Matrix *a, const Matrix *b) {
     Matrix *ab = matrix_alloc(a->rows, a->cols + b->cols);
     for(int i = 0; i < ab->rows; ++i)
         for(int j = 0; j < ab->cols; ++j)
-            ab->p[ab->cols * i + j] = (j < a->cols) ?
-                a->p[a->cols * i + j] : b->p[b->cols * i + j - a->cols];
+            MSUB(ab, i, j) = (j < a->cols) ?
+                MSUB(a, i, j) : MSUB(b, i, j - a->cols);
     return ab;
 }
 
+// Textbook method of inversion
 Matrix *matrix_inverse(const Matrix *mat) {
-    // Textbook method of inversion
     Matrix *inv = matrix_alloc(mat->rows, mat->cols);
     Matrix *id = matrix_identity(mat->rows);
-
     Matrix *aug = matrix_augment(mat, id);
     // reduce(A|I) = I|inv(A)
     matrix_reduce(aug);
     for(int i = 0; i < mat->rows; ++i)
         for(int j = 0; j < mat->cols; ++j)
-            inv->p[inv->cols * i + j] = aug->p[aug->cols * i + j + mat->cols];
+            MSUB(inv, i, j) = MSUB(aug, i, j + mat->cols);
 
     matrix_free(aug);
     matrix_free(id);
@@ -236,8 +237,8 @@ Matrix *matrix_inverse(const Matrix *mat) {
 
 // Oh my god some code duplication ;-;
 
-Matrix *matrix_solve(Matrix *a, Matrix *b, bool *solution) {
-    if(solution != NULL) *solution = true;
+Matrix *matrix_solve(Matrix *a, Matrix *b, int *solution) {
+    if(solution != NULL) *solution = 1;
     int aux, pivots[a->rows];
     for(int i = 0; i < a->rows; ++i) {
         // Step #1: sort rows by insertion, with pivot indexes as keys
@@ -256,17 +257,17 @@ Matrix *matrix_solve(Matrix *a, Matrix *b, bool *solution) {
         // Step #2: divide the i-th row by the value of its pivot
         int p = pivots[i];
         if(p >= a->cols) break;
-        double c = a->p[a->cols * i + p];
+        double c = MSUB(a, i, p);
         for(int j = 0; j < a->cols; ++j)
-            a->p[a->cols * i + j] /= c;
+            MSUB(a, i, j) /= c;
         b->p[b->cols * i] /= c;
         // Step #3: gaussian elimination
         for(int k = 0; k < a->rows; ++k) {
             if(k == i) continue;
-            c = a->p[a->cols * k + p];
+            c = MSUB(a, k, p);
             for(int j = 0; j < a->cols; ++j)
-                a->p[a->cols * k + j] -= a->p[a->cols * i + j] * c;
-            b->p[b->cols * k] -= b->p[b->cols * i] * c;
+                MSUB(a, k, j) -= MSUB(a, i, j) * c;
+            MSUB(b, k, 0) -= MSUB(b, i, 0) * c;
         }
     }
     // Step #4: finish things off
@@ -274,18 +275,19 @@ Matrix *matrix_solve(Matrix *a, Matrix *b, bool *solution) {
     for(int i = 0; i < a->rows; ++i)
         if(pivots[i] >= a->rows && b->p[i] != 0) {
             // rank(A) < rank(A|B) => no solution
-            if(solution != NULL) *solution = false;
+            if(solution != NULL) *solution = 0;
             return res;
         }
         else
-            res->p[res->cols * i] = b->p[b->cols * i];
+            MSUB(res, i, 0) = MSUB(b, i, 0);
     return res;
 }
 
-Matrix *matrix_solve_copy(const Matrix *a, const Matrix *b, bool *solution) {
+Matrix *matrix_solve_copy(const Matrix *a, const Matrix *b, int *solution) {
+    // Make copies first
     Matrix *_a = matrix_copy(a);
     Matrix *_b = matrix_copy(b);
-
+    // Solve passing the copies in
     Matrix *res = matrix_solve(_a, _b, solution);
     matrix_free(_a);
     matrix_free(_b);
@@ -298,15 +300,15 @@ Matrix *matrix_solve_numerical(const Matrix *a, const Matrix *b, int iters) {
 
     for(int k = 0; k < iters; ++k) {
         for(int i = 0; i < res->rows; ++i) {
-            res->p[res->cols * i] = b->p[b->cols * i];
+            MSUB(res, i, 0) = MSUB(b, i, 0);
             for(int j = 0; j < res->rows; ++j) {
                 if(i == j) continue;
-                res->p[res->cols * i] -= a->p[a->cols * i + j] 
-                    * res->p[res->cols * j];
+                MSUB(res, i, 0) -= MSUB(a, i, j) * MSUB(res, j, 0);
             }
-            res->p[res->cols * i] /= a->p[a->cols * i + i];
+            MSUB(res, i, 0) /= MSUB(a, i, i);
         }
     }
     return res;
 }
 
+#undef MSUB
