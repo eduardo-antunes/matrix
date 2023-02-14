@@ -1,11 +1,10 @@
 project('matrix', 'c',
   version: '0.1.0',
-  license: [ 'UNLICENSE' ],
-  default_options: [ 'warning_level=3', 'build=debug' ]
+  license: [ 'Apache-2.0' ],
+  default_options: [ 'warning_level=3' ]
 )
 
 inc = include_directories('dist')
-
 test_executables = {
   'test-solve' : ['test/solve.c', 'dist/matrix.c'],
   'test-solve-numerical' : ['test/solve_numerical.c', 'dist/matrix.c'],
